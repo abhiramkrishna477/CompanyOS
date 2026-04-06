@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,9 +7,8 @@
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet">
-
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
     <!-- Libraries -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -18,450 +16,92 @@
     <style>
         /* --- APP STYLES (Dark Theme matching your Project OS) --- */
         :root {
-            --bg-app: #0f172a;
-            --bg-card: #1e293b;
-            --bg-input: #334155;
-            --primary: #8b5cf6;
-            --primary-hover: #7c3aed;
-            --danger: #ef4444;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --info: #3b82f6;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --border: rgba(255, 255, 255, 0.08);
-            --radius: 16px;
+            --bg-app: #0f172a; --bg-card: #1e293b; --bg-input: #334155;
+            --primary: #8b5cf6; --primary-hover: #7c3aed; 
+            --danger: #ef4444; --success: #10b981; --warning: #f59e0b; --info: #3b82f6;
+            --text-main: #f8fafc; --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08); --radius: 16px;
         }
 
-        * {
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: var(--bg-app); color: var(--text-main); margin: 0; padding: 20px; min-height: 100vh; }
+        
+        #app { max-width: 480px; margin: 0 auto; position: relative; padding-bottom: 90px; }
 
-        body {
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            background-color: var(--bg-app);
-            color: var(--text-main);
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-        }
+        h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 24px; letter-spacing: -0.5px; }
+        h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 16px; font-weight: 600; }
 
-        #app {
-            max-width: 480px;
-            margin: 0 auto;
-            position: relative;
-            padding-bottom: 90px;
-        }
+        .view { display: none; animation: slideUp 0.3s ease-out; }
+        .view.active { display: block; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 24px;
-            letter-spacing: -0.5px;
-        }
-
-        h2 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-muted);
-            margin-bottom: 16px;
-            font-weight: 600;
-        }
-
-        .view {
-            display: none;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        .view.active {
-            display: block;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 16px;
-            margin-bottom: 12px;
-        }
-
-        .chart-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 20px;
-            margin-bottom: 24px;
-        }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; }
+        .chart-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 24px; }
 
         /* --- GLOBAL FILTERS & HERO --- */
-        .global-filter {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-        }
-
-        .global-filter select {
-            width: auto;
-            padding: 8px 16px;
-            border-radius: 20px;
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            font-size: 0.85rem;
-            font-weight: 600;
-            cursor: pointer;
-            color: white;
-        }
-
-        .hero-dashboard {
-            background: linear-gradient(135deg, #1e1b4b 0%, #2e1065 100%);
-            border: 1px solid var(--primary);
-            border-radius: 20px;
-            padding: 24px;
-            margin-bottom: 20px;
-            color: white;
-            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
-            position: relative;
-        }
-
-        .db-status {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.65rem;
-            font-weight: 700;
-            color: rgba(255, 255, 255, 0.7);
-            background: rgba(0, 0, 0, 0.2);
-            padding: 4px 8px;
-            border-radius: 20px;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #666;
-        }
-
-        .status-dot.online {
-            background: var(--success);
-            box-shadow: 0 0 8px var(--success);
-        }
-
-        .status-dot.offline {
-            background: var(--danger);
-        }
-
-        .hero-header {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            margin-bottom: 24px;
-        }
-
-        .hero-logo {
-            width: 44px;
-            height: 44px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 1rem;
-        }
-
-        .stat-item h4 {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.7);
-            font-weight: 600;
-            margin: 0 0 4px 0;
-            text-transform: uppercase;
-        }
-
-        .stat-item p {
-            font-size: 1.2rem;
-            font-weight: 800;
-            margin: 0;
-        }
+        .global-filter { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .global-filter select { width: auto; padding: 8px 16px; border-radius: 20px; background: var(--bg-card); border: 1px solid var(--border); font-size: 0.85rem; font-weight: 600; cursor: pointer; color: white;}
+        
+        .hero-dashboard { background: linear-gradient(135deg, #1e1b4b 0%, #2e1065 100%); border: 1px solid var(--primary); border-radius: 20px; padding: 24px; margin-bottom: 20px; color: white; box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2); position: relative; }
+        .db-status { position: absolute; top: 20px; right: 20px; display: flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 700; color: rgba(255,255,255,0.7); background: rgba(0, 0, 0, 0.2); padding: 4px 8px; border-radius: 20px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+        .status-dot.online { background: var(--success); box-shadow: 0 0 8px var(--success); }
+        .status-dot.offline { background: var(--danger); }
+        
+        .hero-header { display: flex; align-items: center; gap: 15px; margin-bottom: 24px; }
+        .hero-logo { width: 44px; height: 44px; background: rgba(255, 255, 255, 0.1); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; }
+        
+        .stat-item h4 { font-size: 0.7rem; color: rgba(255,255,255,0.7); font-weight: 600; margin: 0 0 4px 0; text-transform: uppercase; }
+        .stat-item p { font-size: 1.2rem; font-weight: 800; margin: 0; }
 
         /* --- BOTTOM NAVIGATION BAR --- */
-        .bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100%;
-            max-width: 480px;
-            background: rgba(30, 41, 59, 0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid var(--border);
-            display: flex;
-            justify-content: space-around;
-            padding: 12px 0;
-            z-index: 1000;
-            padding-bottom: calc(12px + env(safe-area-inset-bottom));
-            border-radius: 24px 24px 0 0;
-        }
-
-        .nav-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            color: var(--text-muted);
-            cursor: pointer;
-            font-size: 0.75rem;
-            font-weight: 600;
-            flex: 1;
-            transition: 0.2s;
-            border: none;
-            background: transparent;
-            outline: none;
-            font-family: inherit;
-        }
-
-        .nav-item.active {
-            color: var(--primary);
-        }
-
-        .nav-icon {
-            font-size: 1.3rem;
-            margin-bottom: 2px;
-        }
+        .bottom-nav { position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; background: rgba(30, 41, 59, 0.95); backdrop-filter: blur(10px); border-top: 1px solid var(--border); display: flex; justify-content: space-around; padding: 12px 0; z-index: 1000; padding-bottom: calc(12px + env(safe-area-inset-bottom)); border-radius: 24px 24px 0 0; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-muted); cursor: pointer; font-size: 0.75rem; font-weight: 600; flex: 1; transition: 0.2s; border: none; background: transparent; outline: none; font-family: inherit;}
+        .nav-item.active { color: var(--primary); }
+        .nav-icon { font-size: 1.3rem; margin-bottom: 2px;}
 
         /* --- INPUTS & ROWS --- */
-        input,
-        select {
-            width: 100%;
-            background: var(--bg-input);
-            border: 1px solid transparent;
-            color: white;
-            padding: 14px;
-            border-radius: 12px;
-            font-family: inherit;
-            font-size: 0.95rem;
-            outline: none;
-            transition: 0.2s;
-        }
-
-        input:focus,
-        select:focus {
-            border-color: var(--primary);
-        }
-
+        input, select { width: 100%; background: var(--bg-input); border: 1px solid transparent; color: white; padding: 14px; border-radius: 12px; font-family: inherit; font-size: 0.95rem; outline: none; transition: 0.2s;}
+        input:focus, select:focus { border-color: var(--primary); }
+        
         /* New Line Item Styles */
-        .opex-category-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 16px;
-        }
+        .opex-category-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; padding: 16px; margin-bottom: 16px; }
+        .opex-category-header { margin-bottom: 12px; }
+        .opex-category-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: white;}
+        .opex-category-header p { margin: 4px 0 0 0; font-size: 0.75rem; color: var(--text-muted);}
+        
+        .opex-line { display: grid; grid-template-columns: 1fr 100px 30px; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .opex-line input[type="text"] { background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; color: white; width: 100%; }
+        
+        .expense-input-wrapper { display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.2); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); }
+        .expense-input-wrapper span { color: var(--text-muted); font-weight: 600; font-size: 0.9rem;}
+        .expense-input-wrapper input { padding: 0; text-align: right; background: transparent; width: 100%; font-weight: 700; color: var(--warning); border: none; }
+        
+        .btn-del-line { background: none; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; opacity: 0.7; display: flex; align-items: center; justify-content: center; padding: 0;}
+        .btn-add-line { background: rgba(139, 92, 246, 0.1); color: var(--primary); border: 1px dashed var(--primary); padding: 10px; border-radius: 8px; width: 100%; font-size: 0.8rem; font-weight: 700; cursor: pointer; margin-top: 12px; transition: 0.2s;}
+        .btn-add-line:hover { background: rgba(139, 92, 246, 0.2); }
 
-        .opex-category-header {
-            margin-bottom: 12px;
-        }
+        .btn-custom-cat { background: transparent; color: var(--text-main); border: 1px dashed var(--text-muted); padding: 14px; border-radius: 12px; width: 100%; font-size: 0.9rem; font-weight: 600; cursor: pointer; margin-bottom: 24px;}
 
-        .opex-category-header h3 {
-            margin: 0;
-            font-size: 1rem;
-            font-weight: 700;
-            color: white;
-        }
+        .calc-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 0.95rem; color: var(--text-muted); }
+        .calc-row span:last-child { font-weight: 700; color: var(--text-main); }
+        .calc-row.total { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 8px; font-size: 1.15rem; font-weight: 800; color: var(--primary); }
 
-        .opex-category-header p {
-            margin: 4px 0 0 0;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-        }
+        .btn-action { width: 100%; padding: 16px; border-radius: 14px; font-size: 1rem; font-weight: 700; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.2s; font-family: inherit; background: var(--primary); color: white; margin-top: 24px;}
+        .btn-action:active { transform: scale(0.98); }
 
-        .opex-line {
-            display: grid;
-            grid-template-columns: 1fr 100px 30px;
-            gap: 8px;
-            margin-bottom: 8px;
-            align-items: center;
-        }
+        #toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: white; color: black; padding: 12px 24px; border-radius: 50px; font-weight: 700; opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 2000; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+        #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-        .opex-line input[type="text"] {
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--border);
-            padding: 10px 12px;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            color: white;
-            width: 100%;
-        }
-
-        .expense-input-wrapper {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 8px 10px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
-
-        .expense-input-wrapper span {
-            color: var(--text-muted);
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .expense-input-wrapper input {
-            padding: 0;
-            text-align: right;
-            background: transparent;
-            width: 100%;
-            font-weight: 700;
-            color: var(--warning);
-            border: none;
-        }
-
-        .btn-del-line {
-            background: none;
-            border: none;
-            color: var(--danger);
-            font-size: 1.2rem;
-            cursor: pointer;
-            opacity: 0.7;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0;
-        }
-
-        .btn-add-line {
-            background: rgba(139, 92, 246, 0.1);
-            color: var(--primary);
-            border: 1px dashed var(--primary);
-            padding: 10px;
-            border-radius: 8px;
-            width: 100%;
-            font-size: 0.8rem;
-            font-weight: 700;
-            cursor: pointer;
-            margin-top: 12px;
-            transition: 0.2s;
-        }
-
-        .btn-add-line:hover {
-            background: rgba(139, 92, 246, 0.2);
-        }
-
-        .btn-custom-cat {
-            background: transparent;
-            color: var(--text-main);
-            border: 1px dashed var(--text-muted);
-            padding: 14px;
-            border-radius: 12px;
-            width: 100%;
-            font-size: 0.9rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-bottom: 24px;
-        }
-
-        .calc-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            font-size: 0.95rem;
-            color: var(--text-muted);
-        }
-
-        .calc-row span:last-child {
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .calc-row.total {
-            border-top: 1px solid var(--border);
-            padding-top: 16px;
-            margin-top: 8px;
-            font-size: 1.15rem;
-            font-weight: 800;
-            color: var(--primary);
-        }
-
-        .btn-action {
-            width: 100%;
-            padding: 16px;
-            border-radius: 14px;
-            font-size: 1rem;
-            font-weight: 700;
-            cursor: pointer;
-            border: none;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            transition: 0.2s;
-            font-family: inherit;
-            background: var(--primary);
-            color: white;
-            margin-top: 24px;
-        }
-
-        .btn-action:active {
-            transform: scale(0.98);
-        }
-
-        #toast {
-            position: fixed;
-            bottom: 90px;
-            left: 50%;
-            transform: translateX(-50%) translateY(20px);
-            background: white;
-            color: black;
-            padding: 12px 24px;
-            border-radius: 50px;
-            font-weight: 700;
-            opacity: 0;
-            pointer-events: none;
-            transition: all 0.3s;
-            z-index: 2000;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        }
-
-        #toast.show {
-            opacity: 1;
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .error-banner {
-            background: rgba(239, 68, 68, 0.1);
-            border: 1px solid var(--danger);
-            color: #fca5a5;
-            padding: 16px;
-            border-radius: 12px;
-            margin-bottom: 20px;
-            font-size: 0.85rem;
-            display: none;
-        }
+        .error-banner { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: #fca5a5; padding: 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.85rem; display: none; }
+        
+        /* New Floating Button */
+        .floating-refresh { position: fixed; bottom: 85px; right: 20px; width: 50px; height: 50px; border-radius: 25px; background: var(--bg-card); border: 1px solid var(--border); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000; cursor: pointer; transition: all 0.2s ease; }
+        .floating-refresh:active { transform: scale(0.9); }
+        .floating-refresh.spinning .icon { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
-
 <body>
 
     <div id="toast">✅ Success</div>
@@ -470,16 +110,12 @@
         <!-- Error Banner for Missing Table/Column -->
         <div id="db-error" class="error-banner">
             <strong>⚠️ Database Setup Required</strong><br><br>
-            Please run the SQL snippet to create/update your table. Ensure <code>finance_expenses</code> has the
-            <code>description</code> text column!
+            Please run the SQL snippet to create/update your table. Ensure <code>finance_expenses</code> has the <code>description</code> text column!
         </div>
 
         <div class="global-filter">
             <h1 style="margin: 0;">Company OS</h1>
             <div style="display: flex; gap: 10px; align-items: center;">
-                <button onclick="fetchData()"
-                    style="background: var(--bg-card); border: 1px solid var(--border); color: white; padding: 6px 10px; border-radius: 12px; cursor: pointer; font-size: 1rem; transition: 0.2s;"
-                    title="Force Refresh">🔄</button>
                 <select id="global-month-filter" onchange="handleDateChange()">
                     <!-- Filled by JS -->
                 </select>
@@ -492,43 +128,33 @@
 
         <!-- ================= VIEW 1: HEALTH DASHBOARD ================= -->
         <div id="view-dashboard" class="view active">
-
+            
             <!-- Real Profit Hero -->
             <div class="hero-dashboard">
                 <div class="db-status">
                     <div id="conn-dot" class="status-dot"></div><span id="conn-text">SYNCING</span>
                 </div>
-
-                <div class="hero-header" style="margin-bottom: 15px;">
-                    <div class="hero-logo" style="color: var(--primary);">💼</div>
-                    <div>
-                        <div style="font-size: 1.1rem; font-weight: 800;">TRUE NET PROFIT</div>
-                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">After all business expenses</div>
-                    </div>
+                
+                <div style="text-align: center; margin-bottom: 24px; padding-top: 10px;">
+                    <h2 style="color: rgba(255,255,255,0.8); margin-bottom: 8px; font-size: 0.9rem;">TRUE NET PROFIT</h2>
+                    <p id="dash-net-profit" style="font-size: 3.2rem; font-weight: 800; line-height: 1; margin: 0; color: white;">₹0</p>
+                    <div style="font-size: 0.75rem; color: var(--success); margin-top: 8px; font-weight: 600;">After all business expenses</div>
                 </div>
 
-                <div style="padding-bottom: 15px;">
-                    <div class="stat-item" style="margin-bottom: 20px; text-align: center;">
-                        <p id="dash-net-profit" style="font-size: 2.8rem; color: white;">₹0</p>
+                <div style="background: rgba(0,0,0,0.3); border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); overflow: hidden;">
+                    <div style="padding: 16px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(59, 130, 246, 0.1);">
+                        <h4 style="font-size: 0.7rem; color: var(--info); font-weight: 700; margin: 0 0 6px 0; letter-spacing: 0.5px;">TOTAL BOOKED REVENUE</h4>
+                        <p id="dash-booked-revenue" style="font-size: 1.4rem; font-weight: 800; margin: 0; color: white;">₹0</p>
                     </div>
-
-                    <div
-                        style="display: flex; justify-content: center; align-items: center; background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(59, 130, 246, 0.3);">
-                        <div class="stat-item" style="text-align: center;">
-                            <h4 style="color: var(--info);">TOTAL BOOKED REVENUE</h4>
-                            <p id="dash-booked-revenue" style="font-size: 1.3rem; color: var(--info);">₹0</p>
+                    
+                    <div style="display: flex;">
+                        <div style="flex: 1; padding: 16px; text-align: center; border-right: 1px solid rgba(255,255,255,0.05);">
+                            <h4 style="font-size: 0.7rem; color: var(--success); font-weight: 700; margin: 0 0 6px 0; letter-spacing: 0.5px;">GROSS PROFIT (PROJECTS)</h4>
+                            <p id="dash-gross-profit" style="font-size: 1.1rem; font-weight: 800; margin: 0; color: white;">₹0</p>
                         </div>
-                    </div>
-
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 12px;">
-                        <div class="stat-item">
-                            <h4 style="color: var(--success);">GROSS PROFIT (Projects)</h4>
-                            <p id="dash-gross-profit" style="font-size: 1.1rem; color: var(--success);">₹0</p>
-                        </div>
-                        <div class="stat-item" style="text-align: right;">
-                            <h4 style="color: var(--warning);">FIXED OPEX (Company)</h4>
-                            <p id="dash-total-opex" style="font-size: 1.1rem; color: var(--warning);">₹0</p>
+                        <div style="flex: 1; padding: 16px; text-align: center;">
+                            <h4 style="font-size: 0.7rem; color: var(--warning); font-weight: 700; margin: 0 0 6px 0; letter-spacing: 0.5px;">FIXED OPEX (COMPANY)</h4>
+                            <p id="dash-total-opex" style="font-size: 1.1rem; font-weight: 800; margin: 0; color: white;">₹0</p>
                         </div>
                     </div>
                 </div>
@@ -544,16 +170,14 @@
                     <canvas id="opexPieChart"></canvas>
                 </div>
             </div>
-
+            
             <div class="card" style="background: rgba(139, 92, 246, 0.05); border-color: rgba(139, 92, 246, 0.2);">
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <div style="font-weight: 700; margin-bottom: 4px;">Update Monthly Expenses</div>
-                        <div style="font-size: 0.8rem; color: var(--text-muted);">Manage salaries, rent, tools, etc.
-                        </div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Manage salaries, rent, tools, etc.</div>
                     </div>
-                    <button onclick="router('expenses')"
-                        style="background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 700; cursor: pointer;">Manage</button>
+                    <button onclick="router('expenses')" style="background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 700; cursor: pointer;">Manage</button>
                 </div>
             </div>
         </div>
@@ -563,8 +187,7 @@
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
                 <h1 style="margin: 0;">Monthly Expenses</h1>
             </div>
-            <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Track specific line items for
-                <span id="opex-month-label" style="font-weight: 700; color: white;"></span>.</div>
+            <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Track specific line items for <span id="opex-month-label" style="font-weight: 700; color: white;"></span>.</div>
 
             <div id="opex-container">
                 <!-- Populated by JS -->
@@ -596,6 +219,11 @@
         </button>
     </div>
 
+    <!-- Floating Refresh Button -->
+    <button id="btn-floating-refresh" class="floating-refresh" onclick="syncAndRefresh()">
+        <div class="icon">🔄</div>
+    </button>
+
     <script>
         // ============================================================
         // CONFIG & STATE
@@ -605,7 +233,7 @@
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-
+        
         // Base definitions for standard categories
         const OPEX_CATEGORIES = [
             { name: 'Team & Salaries', desc: 'Editors, freelancers, manager salaries' },
@@ -622,7 +250,7 @@
             selectedMonth: monthsList[new Date().getMonth()],
             dbProjects: [],
             dbOpex: [], // All raw DB rows
-
+            
             // Local state for the specific month editor
             currentMonthItems: [],
             deletedItemIds: [],
@@ -655,7 +283,7 @@
             const dot = document.getElementById('conn-dot');
             const text = document.getElementById('conn-text');
             const errorBanner = document.getElementById('db-error');
-
+            
             try {
                 // Fetch COGS Data (Projects + Expenses)
                 const { data: projects, error: errP } = await supabaseClient.from('projects').select('*, expenses(actual_amount)');
@@ -664,7 +292,7 @@
 
                 // Fetch OPEX Data
                 const { data: opex, error: errO } = await supabaseClient.from(TABLE_NAME).select('*');
-
+                
                 if (errO) {
                     errorBanner.style.display = 'block';
                     state.dbOpex = [];
@@ -674,10 +302,10 @@
                 }
 
                 dot.classList.add('online'); text.innerText = "ONLINE";
-
+                
                 updateDashboard();
                 prepareMonthState();
-
+                
                 // FIX: Force the UI to visually refresh with the new data if you're on the expenses tab!
                 if (document.getElementById('view-expenses').classList.contains('active')) {
                     renderOpexInputs();
@@ -691,21 +319,21 @@
         function router(viewId) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById('view-' + viewId).classList.add('active');
-
+            
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
             document.getElementById('nav-' + viewId).classList.add('active');
-
-            if (viewId === 'dashboard') updateDashboard();
-            if (viewId === 'expenses') renderOpexInputs();
+            
+            if(viewId === 'dashboard') updateDashboard();
+            if(viewId === 'expenses') renderOpexInputs();
         }
 
         function handleDateChange() {
             state.selectedMonth = document.getElementById('global-month-filter').value;
             state.selectedYear = document.getElementById('global-year-filter').value;
-
+            
             updateDashboard();
             prepareMonthState();
-            if (document.getElementById('view-expenses').classList.contains('active')) {
+            if(document.getElementById('view-expenses').classList.contains('active')) {
                 renderOpexInputs();
             }
         }
@@ -721,10 +349,10 @@
             state.dbProjects.forEach(p => {
                 const matchMonth = p.month_name === state.selectedMonth;
                 const matchYear = p.date && p.date.startsWith(state.selectedYear);
-
+                
                 if (matchMonth && matchYear && (p.status === 'Confirmed' || p.status === 'Completed')) {
                     totalRevenue += (Number(p.total_value) || 0);
-
+                    
                     if (p.expenses) {
                         p.expenses.forEach(e => {
                             totalCOGS += (Number(e.actual_amount) || 0);
@@ -751,7 +379,7 @@
             document.getElementById('dash-booked-revenue').innerText = formatINR(totalRevenue);
             document.getElementById('dash-gross-profit').innerText = formatINR(grossProfit);
             document.getElementById('dash-total-opex').innerText = formatINR(totalOPEX);
-
+            
             const npEl = document.getElementById('dash-net-profit');
             npEl.innerText = formatINR(netProfit);
             npEl.style.color = netProfit >= 0 ? 'white' : 'var(--danger)';
@@ -788,8 +416,8 @@
                 options: {
                     responsive: true, maintainAspectRatio: false, cutout: '70%',
                     plugins: {
-                        legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8', font: { size: 10 } } },
-                        tooltip: { callbacks: { label: function (context) { return ' ' + formatINR(context.raw); } } }
+                        legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8', font: {size: 10} } },
+                        tooltip: { callbacks: { label: function(context) { return ' ' + formatINR(context.raw); } } }
                     }
                 }
             });
@@ -798,13 +426,13 @@
         // ============================================================
         // OPEX MANAGER (DYNAMIC LINE ITEMS)
         // ============================================================
-
+        
         function prepareMonthState() {
             // FIXED BUG: Using String() to ensure an integer year from Supabase matches the string from the dropdown.
             state.currentMonthItems = state.dbOpex
                 .filter(e => e.month_name === state.selectedMonth && String(e.year) === String(state.selectedYear))
                 .map(e => ({ ...e })); // clone
-
+                
             state.deletedItemIds = [];
             state.customCategories = [];
 
@@ -824,7 +452,7 @@
 
             // Render Standard Categories
             OPEX_CATEGORIES.forEach(cat => renderCategoryBlock(container, cat.name, cat.desc));
-
+            
             // Render Custom Categories found in DB or added manually
             state.customCategories.forEach(catName => renderCategoryBlock(container, catName, 'Custom Category'));
 
@@ -835,7 +463,7 @@
             const block = document.createElement('div');
             block.className = 'opex-category-card';
             const safeName = categoryName.replace(/\s+/g, '-');
-
+            
             const header = document.createElement('div');
             header.className = 'opex-category-header';
             header.style.display = 'flex';
@@ -857,7 +485,7 @@
 
             // Find all items matching this category
             const items = state.currentMonthItems.filter(item => item.category === categoryName);
-
+            
             // If the category is totally empty, automatically give the user one blank line to start with!
             if (items.length === 0) {
                 addLineItem(categoryName, linesContainer);
@@ -882,7 +510,7 @@
             const line = document.createElement('div');
             line.className = 'opex-line';
             line.id = `line-${item.id}`;
-
+            
             // FIXED BUG: Switched onchange to oninput so descriptions capture immediately without needing to click outside.
             line.innerHTML = `
                 <input type="text" placeholder="Short description..." value="${item.description || ''}" oninput="updateLineItem('${item.id}', 'description', this.value)">
@@ -904,7 +532,7 @@
                 description: '',
                 amount: 0
             };
-
+            
             state.currentMonthItems.push(newItem);
             container.appendChild(createLineElement(newItem));
         }
@@ -920,7 +548,7 @@
         function removeLineItem(id) {
             // Remove from local array
             state.currentMonthItems = state.currentMonthItems.filter(i => i.id != id);
-
+            
             // Mark for DB deletion if it's not a temp item
             if (!id.toString().startsWith('temp_')) {
                 state.deletedItemIds.push(id);
@@ -936,7 +564,7 @@
         function addCustomCategory() {
             const catName = prompt("Enter the name of the custom category:");
             if (!catName || catName.trim() === "") return;
-
+            
             const cleanName = catName.trim();
             const standardCatNames = OPEX_CATEGORIES.map(c => c.name);
 
@@ -955,7 +583,7 @@
             state.currentMonthItems.forEach(item => {
                 const amt = Number(item.amount) || 0;
                 grandTotal += amt;
-
+                
                 if (!categoryTotals[item.category]) categoryTotals[item.category] = 0;
                 categoryTotals[item.category] += amt;
             });
@@ -973,9 +601,25 @@
             });
         }
 
-        async function saveOpexData() {
+        async function syncAndRefresh() {
+            const refreshBtn = document.getElementById('btn-floating-refresh');
+            refreshBtn.classList.add('spinning');
+            
+            try {
+                // First save any pending changes silently
+                await saveOpexData(true); 
+            } catch (error) {
+                console.error("Sync failed, falling back to fetch", error);
+                await fetchData(); // Fallback if save errors out
+            }
+            
+            refreshBtn.classList.remove('spinning');
+            showToast("Synced & Refreshed! 🔄");
+        }
+
+        async function saveOpexData(isSilent = false) {
             const btn = document.querySelector('.btn-action');
-            btn.innerText = "⏳ Saving...";
+            if (!isSilent) btn.innerText = "⏳ Saving...";
 
             try {
                 // 1. Process Deletions
@@ -990,7 +634,7 @@
                 for (let item of state.currentMonthItems) {
                     // Ignore empty zero-amount rows to prevent DB clutter, unless they have a description
                     if (item.amount === 0 && (!item.description || item.description.trim() === '')) {
-                        continue;
+                        continue; 
                     }
 
                     if (item.id.toString().startsWith('temp_')) {
@@ -1004,7 +648,7 @@
                             amount: item.amount,
                             phase: 'opex' // Updated to correctly tag these as OPEX
                         }).select();
-
+                        
                         if (error) throw error;
 
                         if (inserted && inserted.length > 0) {
@@ -1013,33 +657,34 @@
                         }
                     } else {
                         // Update
-                        const { error } = await supabaseClient.from(TABLE_NAME).update({
-                            description: item.description,
-                            amount: item.amount
+                        const { error } = await supabaseClient.from(TABLE_NAME).update({ 
+                            description: item.description, 
+                            amount: item.amount 
                         }).eq('id', item.id);
-
+                        
                         if (error) throw error;
-
+                        
                         // sync cache
                         const idx = state.dbOpex.findIndex(e => e.id == item.id);
-                        if (idx > -1) {
+                        if(idx > -1) {
                             state.dbOpex[idx].description = item.description;
                             state.dbOpex[idx].amount = item.amount;
                         }
                     }
                 }
-
-                showToast("Monthly OPEX Saved! 💾");
-
+                
+                if (!isSilent) showToast("Monthly OPEX Saved! 💾");
+                
                 // Re-render to stabilize temporary IDs into real IDs and fetch fresh
-                await fetchData();
+                await fetchData(); 
 
             } catch (error) {
                 console.error("Save Error:", error);
-                alert(`Supabase Error: ${error.message}\n\nIf it mentions "row-level security", go to Supabase -> Authentication -> Policies and disable RLS for 'finance_expenses'.`);
+                if (!isSilent) alert(`Supabase Error: ${error.message}\n\nIf it mentions "row-level security", go to Supabase -> Authentication -> Policies and disable RLS for 'finance_expenses'.`);
+                throw error;
             }
 
-            btn.innerText = "💾 Save Expenses";
+            if (!isSilent) btn.innerText = "💾 Save Expenses";
         }
 
         function showToast(msg) {
@@ -1050,5 +695,4 @@
 
     </script>
 </body>
-
 </html>
