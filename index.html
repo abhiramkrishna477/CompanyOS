@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agency OPEX OS | AIGFOX</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet">
+
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* --- APP STYLES (Dark Theme matching your Project OS) --- */
+        :root {
+            --bg-app: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #334155;
+            --primary: #8b5cf6;
+            --primary-hover: #7c3aed;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-app);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        #app {
+            max-width: 480px;
+            margin: 0 auto;
+            position: relative;
+            padding-bottom: 90px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 24px;
+            letter-spacing: -0.5px;
+        }
+
+        h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+
+        .view {
+            display: none;
+            animation: slideUp 0.3s ease-out;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+
+        .chart-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        /* --- GLOBAL FILTERS & HERO --- */
+        .global-filter {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .global-filter select {
+            width: auto;
+            padding: 8px 16px;
+            border-radius: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: white;
+        }
+
+        .hero-dashboard {
+            background: linear-gradient(135deg, #1e1b4b 0%, #2e1065 100%);
+            border: 1px solid var(--primary);
+            border-radius: 20px;
+            padding: 24px;
+            margin-bottom: 20px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(139, 92, 246, 0.2);
+            position: relative;
+        }
+
+        .db-status {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.7);
+            background: rgba(0, 0, 0, 0.2);
+            padding: 4px 8px;
+            border-radius: 20px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+
+        .status-dot.online {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .status-dot.offline {
+            background: var(--danger);
+        }
+
+        .hero-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 24px;
+        }
+
+        .hero-logo {
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1rem;
+        }
+
+        .stat-item h4 {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            text-transform: uppercase;
+        }
+
+        .stat-item p {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        /* --- BOTTOM NAVIGATION BAR --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 480px;
+            background: rgba(30, 41, 59, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 12px 0;
+            z-index: 1000;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom));
+            border-radius: 24px 24px 0 0;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-weight: 600;
+            flex: 1;
+            transition: 0.2s;
+            border: none;
+            background: transparent;
+            outline: none;
+            font-family: inherit;
+        }
+
+        .nav-item.active {
+            color: var(--primary);
+        }
+
+        .nav-icon {
+            font-size: 1.3rem;
+            margin-bottom: 2px;
+        }
+
+        /* --- INPUTS & ROWS --- */
+        input,
+        select {
+            width: 100%;
+            background: var(--bg-input);
+            border: 1px solid transparent;
+            color: white;
+            padding: 14px;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: 0.2s;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: var(--primary);
+        }
+
+        /* New Line Item Styles */
+        .opex-category-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .opex-category-header {
+            margin-bottom: 12px;
+        }
+
+        .opex-category-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        .opex-category-header p {
+            margin: 4px 0 0 0;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+
+        .opex-line {
+            display: grid;
+            grid-template-columns: 1fr 100px 30px;
+            gap: 8px;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .opex-line input[type="text"] {
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--border);
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: white;
+            width: 100%;
+        }
+
+        .expense-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .expense-input-wrapper span {
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .expense-input-wrapper input {
+            padding: 0;
+            text-align: right;
+            background: transparent;
+            width: 100%;
+            font-weight: 700;
+            color: var(--warning);
+            border: none;
+        }
+
+        .btn-del-line {
+            background: none;
+            border: none;
+            color: var(--danger);
+            font-size: 1.2rem;
+            cursor: pointer;
+            opacity: 0.7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+
+        .btn-add-line {
+            background: rgba(139, 92, 246, 0.1);
+            color: var(--primary);
+            border: 1px dashed var(--primary);
+            padding: 10px;
+            border-radius: 8px;
+            width: 100%;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            margin-top: 12px;
+            transition: 0.2s;
+        }
+
+        .btn-add-line:hover {
+            background: rgba(139, 92, 246, 0.2);
+        }
+
+        .btn-custom-cat {
+            background: transparent;
+            color: var(--text-main);
+            border: 1px dashed var(--text-muted);
+            padding: 14px;
+            border-radius: 12px;
+            width: 100%;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 24px;
+        }
+
+        .calc-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            color: var(--text-muted);
+        }
+
+        .calc-row span:last-child {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .calc-row.total {
+            border-top: 1px solid var(--border);
+            padding-top: 16px;
+            margin-top: 8px;
+            font-size: 1.15rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 16px;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: 0.2s;
+            font-family: inherit;
+            background: var(--primary);
+            color: white;
+            margin-top: 24px;
+        }
+
+        .btn-action:active {
+            transform: scale(0.98);
+        }
+
+        #toast {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) translateY(20px);
+            background: white;
+            color: black;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-weight: 700;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+            z-index: 2000;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        #toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .error-banner {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid var(--danger);
+            color: #fca5a5;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 0.85rem;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="toast">✅ Success</div>
+
+    <div id="app">
+        <!-- Error Banner for Missing Table/Column -->
+        <div id="db-error" class="error-banner">
+            <strong>⚠️ Database Setup Required</strong><br><br>
+            Please run the SQL snippet to create/update your table. Ensure <code>finance_expenses</code> has the
+            <code>description</code> text column!
+        </div>
+
+        <div class="global-filter">
+            <h1 style="margin: 0;">Company OS</h1>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button onclick="fetchData()"
+                    style="background: var(--bg-card); border: 1px solid var(--border); color: white; padding: 6px 10px; border-radius: 12px; cursor: pointer; font-size: 1rem; transition: 0.2s;"
+                    title="Force Refresh">🔄</button>
+                <select id="global-month-filter" onchange="handleDateChange()">
+                    <!-- Filled by JS -->
+                </select>
+                <select id="global-year-filter" onchange="handleDateChange()">
+                    <option value="2026" selected>2026</option>
+                    <option value="2025">2025</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- ================= VIEW 1: HEALTH DASHBOARD ================= -->
+        <div id="view-dashboard" class="view active">
+
+            <!-- Real Profit Hero -->
+            <div class="hero-dashboard">
+                <div class="db-status">
+                    <div id="conn-dot" class="status-dot"></div><span id="conn-text">SYNCING</span>
+                </div>
+
+                <div class="hero-header" style="margin-bottom: 15px;">
+                    <div class="hero-logo" style="color: var(--primary);">💼</div>
+                    <div>
+                        <div style="font-size: 1.1rem; font-weight: 800;">TRUE NET PROFIT</div>
+                        <div style="font-size: 0.8rem; color: rgba(255,255,255,0.7);">After all business expenses</div>
+                    </div>
+                </div>
+
+                <div style="padding-bottom: 15px;">
+                    <div class="stat-item" style="margin-bottom: 20px; text-align: center;">
+                        <p id="dash-net-profit" style="font-size: 2.8rem; color: white;">₹0</p>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: center; align-items: center; background: rgba(59, 130, 246, 0.15); padding: 12px; border-radius: 12px; margin-bottom: 12px; border: 1px solid rgba(59, 130, 246, 0.3);">
+                        <div class="stat-item" style="text-align: center;">
+                            <h4 style="color: var(--info);">TOTAL BOOKED REVENUE</h4>
+                            <p id="dash-booked-revenue" style="font-size: 1.3rem; color: var(--info);">₹0</p>
+                        </div>
+                    </div>
+
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 12px;">
+                        <div class="stat-item">
+                            <h4 style="color: var(--success);">GROSS PROFIT (Projects)</h4>
+                            <p id="dash-gross-profit" style="font-size: 1.1rem; color: var(--success);">₹0</p>
+                        </div>
+                        <div class="stat-item" style="text-align: right;">
+                            <h4 style="color: var(--warning);">FIXED OPEX (Company)</h4>
+                            <p id="dash-total-opex" style="font-size: 1.1rem; color: var(--warning);">₹0</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Breakdown Chart -->
+            <div class="chart-card">
+                <h2 style="margin-bottom: 15px; display: flex; justify-content: space-between;">
+                    <span>Burn Rate Breakdown</span>
+                    <span id="chart-burn-rate" style="color: var(--warning);">₹0 / mo</span>
+                </h2>
+                <div style="position: relative; height: 220px; width: 100%;">
+                    <canvas id="opexPieChart"></canvas>
+                </div>
+            </div>
+
+            <div class="card" style="background: rgba(139, 92, 246, 0.05); border-color: rgba(139, 92, 246, 0.2);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 700; margin-bottom: 4px;">Update Monthly Expenses</div>
+                        <div style="font-size: 0.8rem; color: var(--text-muted);">Manage salaries, rent, tools, etc.
+                        </div>
+                    </div>
+                    <button onclick="router('expenses')"
+                        style="background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 10px; font-weight: 700; cursor: pointer;">Manage</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VIEW 2: EXPENSE MANAGER ================= -->
+        <div id="view-expenses" class="view">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                <h1 style="margin: 0;">Monthly Expenses</h1>
+            </div>
+            <div style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 24px;">Track specific line items for
+                <span id="opex-month-label" style="font-weight: 700; color: white;"></span>.</div>
+
+            <div id="opex-container">
+                <!-- Populated by JS -->
+            </div>
+
+            <button class="btn-custom-cat" onclick="addCustomCategory()">+ Add Custom Category</button>
+
+            <div class="card calc-card" style="margin-top: 10px;">
+                <div class="calc-row total" style="border: none; padding: 0; margin: 0;">
+                    <span style="text-transform: uppercase; font-size: 0.9rem;">Total Monthly Burn:</span>
+                    <span id="val-opex-total" style="color: var(--warning);">₹0</span>
+                </div>
+            </div>
+
+            <button class="btn-action" onclick="saveOpexData()">💾 Save Expenses</button>
+        </div>
+
+    </div>
+
+    <!-- MAIN BOTTOM NAVIGATION BAR -->
+    <div class="bottom-nav">
+        <button class="nav-item active" id="nav-dashboard" onclick="router('dashboard')">
+            <div class="nav-icon">📊</div>
+            <div>Health</div>
+        </button>
+        <button class="nav-item" id="nav-expenses" onclick="router('expenses')">
+            <div class="nav-icon">🏢</div>
+            <div>OPEX</div>
+        </button>
+    </div>
+
+    <script>
+        // ============================================================
+        // CONFIG & STATE
+        // ============================================================
+        const SUPABASE_URL = "https://jtpsnufycomhozsiegjh.supabase.co";
+        const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0cHNudWZ5Y29taG96c2llZ2poIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5OTI5NjAsImV4cCI6MjA3NzU2ODk2MH0.SsKcUAjkv4gsTKawOfN-KKzYRkUKoQZj-JZDo8liggc";
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        const monthsList = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        // Base definitions for standard categories
+        const OPEX_CATEGORIES = [
+            { name: 'Team & Salaries', desc: 'Editors, freelancers, manager salaries' },
+            { name: 'Office & Infra', desc: 'Rent, electricity, internet, water' },
+            { name: 'Software & Tools', desc: 'Adobe, Drive, domains, AI tools' },
+            { name: 'Communication', desc: 'Mobile bills, WhatsApp tools' },
+            { name: 'Logistics & Travel', desc: 'Non-project travel, general fuel' },
+            { name: 'Marketing & Growth', desc: 'Ads, portfolio shoots, branding' },
+            { name: 'Miscellaneous', desc: 'Team snacks, emergency spends' }
+        ];
+
+        const state = {
+            selectedYear: '2026',
+            selectedMonth: monthsList[new Date().getMonth()],
+            dbProjects: [],
+            dbOpex: [], // All raw DB rows
+
+            // Local state for the specific month editor
+            currentMonthItems: [],
+            deletedItemIds: [],
+            customCategories: [] // Any dynamically added categories
+        };
+
+        const TABLE_NAME = 'finance_expenses';
+
+        let opexPieChartInstance = null;
+        const formatINR = (n) => "₹" + Math.round(n || 0).toLocaleString('en-IN');
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Plus Jakarta Sans', sans-serif";
+
+        // ============================================================
+        // INITIALIZATION
+        // ============================================================
+        window.onload = async () => {
+            const globalMf = document.getElementById('global-month-filter');
+            monthsList.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m; opt.innerText = m;
+                if (m === state.selectedMonth) opt.selected = true;
+                globalMf.appendChild(opt);
+            });
+
+            await fetchData();
+        };
+
+        async function fetchData() {
+            const dot = document.getElementById('conn-dot');
+            const text = document.getElementById('conn-text');
+            const errorBanner = document.getElementById('db-error');
+
+            try {
+                // Fetch COGS Data (Projects + Expenses)
+                const { data: projects, error: errP } = await supabaseClient.from('projects').select('*, expenses(actual_amount)');
+                if (errP) throw errP;
+                state.dbProjects = projects || [];
+
+                // Fetch OPEX Data
+                const { data: opex, error: errO } = await supabaseClient.from(TABLE_NAME).select('*');
+
+                if (errO) {
+                    errorBanner.style.display = 'block';
+                    state.dbOpex = [];
+                } else {
+                    errorBanner.style.display = 'none';
+                    state.dbOpex = opex || [];
+                }
+
+                dot.classList.add('online'); text.innerText = "ONLINE";
+
+                updateDashboard();
+                prepareMonthState();
+
+                // FIX: Force the UI to visually refresh with the new data if you're on the expenses tab!
+                if (document.getElementById('view-expenses').classList.contains('active')) {
+                    renderOpexInputs();
+                }
+            } catch (error) {
+                console.error(error);
+                dot.classList.add('offline'); text.innerText = "OFFLINE";
+            }
+        }
+
+        function router(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById('view-' + viewId).classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('nav-' + viewId).classList.add('active');
+
+            if (viewId === 'dashboard') updateDashboard();
+            if (viewId === 'expenses') renderOpexInputs();
+        }
+
+        function handleDateChange() {
+            state.selectedMonth = document.getElementById('global-month-filter').value;
+            state.selectedYear = document.getElementById('global-year-filter').value;
+
+            updateDashboard();
+            prepareMonthState();
+            if (document.getElementById('view-expenses').classList.contains('active')) {
+                renderOpexInputs();
+            }
+        }
+
+        // ============================================================
+        // DASHBOARD (CALCULATING TRUE PROFIT)
+        // ============================================================
+        function updateDashboard() {
+            let totalRevenue = 0;
+            let totalCOGS = 0;
+            let totalOPEX = 0;
+
+            state.dbProjects.forEach(p => {
+                const matchMonth = p.month_name === state.selectedMonth;
+                const matchYear = p.date && p.date.startsWith(state.selectedYear);
+
+                if (matchMonth && matchYear && (p.status === 'Confirmed' || p.status === 'Completed')) {
+                    totalRevenue += (Number(p.total_value) || 0);
+
+                    if (p.expenses) {
+                        p.expenses.forEach(e => {
+                            totalCOGS += (Number(e.actual_amount) || 0);
+                        });
+                    }
+                }
+            });
+
+            const grossProfit = totalRevenue - totalCOGS;
+
+            let opexBreakdown = {};
+            state.dbOpex.forEach(exp => {
+                // FIXED BUG: Coerce exp.year to string to prevent mismatch with state.selectedYear
+                if (exp.month_name === state.selectedMonth && String(exp.year) === String(state.selectedYear)) {
+                    const amt = Number(exp.amount) || 0;
+                    totalOPEX += amt;
+                    opexBreakdown[exp.category] = (opexBreakdown[exp.category] || 0) + amt;
+                }
+            });
+
+            const netProfit = grossProfit - totalOPEX;
+
+            // Update UI
+            document.getElementById('dash-booked-revenue').innerText = formatINR(totalRevenue);
+            document.getElementById('dash-gross-profit').innerText = formatINR(grossProfit);
+            document.getElementById('dash-total-opex').innerText = formatINR(totalOPEX);
+
+            const npEl = document.getElementById('dash-net-profit');
+            npEl.innerText = formatINR(netProfit);
+            npEl.style.color = netProfit >= 0 ? 'white' : 'var(--danger)';
+
+            document.getElementById('chart-burn-rate').innerText = formatINR(totalOPEX) + " / mo";
+
+            renderOpexChart(opexBreakdown);
+        }
+
+        function renderOpexChart(dataObj) {
+            const ctx = document.getElementById('opexPieChart').getContext('2d');
+            const labels = Object.keys(dataObj);
+            const data = Object.values(dataObj);
+
+            if (opexPieChartInstance) opexPieChartInstance.destroy();
+
+            if (data.length === 0 || data.every(v => v === 0)) {
+                opexPieChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: { labels: ['No Expenses Logged'], datasets: [{ data: [1], backgroundColor: ['rgba(255,255,255,0.05)'], borderWidth: 0 }] },
+                    options: { plugins: { tooltip: { enabled: false }, legend: { display: false } }, cutout: '75%' }
+                });
+                return;
+            }
+
+            const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#a855f7', '#14b8a6'];
+
+            opexPieChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{ data: data, backgroundColor: colors, borderWidth: 0, borderRadius: 4 }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    plugins: {
+                        legend: { position: 'right', labels: { usePointStyle: true, boxWidth: 8, color: '#94a3b8', font: { size: 10 } } },
+                        tooltip: { callbacks: { label: function (context) { return ' ' + formatINR(context.raw); } } }
+                    }
+                }
+            });
+        }
+
+        // ============================================================
+        // OPEX MANAGER (DYNAMIC LINE ITEMS)
+        // ============================================================
+
+        function prepareMonthState() {
+            // FIXED BUG: Using String() to ensure an integer year from Supabase matches the string from the dropdown.
+            state.currentMonthItems = state.dbOpex
+                .filter(e => e.month_name === state.selectedMonth && String(e.year) === String(state.selectedYear))
+                .map(e => ({ ...e })); // clone
+
+            state.deletedItemIds = [];
+            state.customCategories = [];
+
+            // Detect any categories loaded from DB that aren't in the standard list
+            const standardCatNames = OPEX_CATEGORIES.map(c => c.name);
+            state.currentMonthItems.forEach(item => {
+                if (!standardCatNames.includes(item.category) && !state.customCategories.includes(item.category)) {
+                    state.customCategories.push(item.category);
+                }
+            });
+        }
+
+        function renderOpexInputs() {
+            document.getElementById('opex-month-label').innerText = `${state.selectedMonth} ${state.selectedYear}`;
+            const container = document.getElementById('opex-container');
+            container.innerHTML = '';
+
+            // Render Standard Categories
+            OPEX_CATEGORIES.forEach(cat => renderCategoryBlock(container, cat.name, cat.desc));
+
+            // Render Custom Categories found in DB or added manually
+            state.customCategories.forEach(catName => renderCategoryBlock(container, catName, 'Custom Category'));
+
+            calculateOpexTotal();
+        }
+
+        function renderCategoryBlock(container, categoryName, description) {
+            const block = document.createElement('div');
+            block.className = 'opex-category-card';
+            const safeName = categoryName.replace(/\s+/g, '-');
+
+            const header = document.createElement('div');
+            header.className = 'opex-category-header';
+            header.style.display = 'flex';
+            header.style.justifyContent = 'space-between';
+            header.style.alignItems = 'center';
+            header.innerHTML = `
+                <div>
+                    <h3>${categoryName}</h3>
+                    <p>${description}</p>
+                </div>
+                <div style="background: rgba(0,0,0,0.2); padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); font-weight: 800; font-size: 1rem; color: var(--warning);" id="cat-total-${safeName}">
+                    ₹0
+                </div>
+            `;
+            block.appendChild(header);
+
+            const linesContainer = document.createElement('div');
+            linesContainer.id = `cat-lines-${categoryName.replace(/\s+/g, '-')}`;
+
+            // Find all items matching this category
+            const items = state.currentMonthItems.filter(item => item.category === categoryName);
+
+            // If the category is totally empty, automatically give the user one blank line to start with!
+            if (items.length === 0) {
+                addLineItem(categoryName, linesContainer);
+            } else {
+                items.forEach(item => {
+                    linesContainer.appendChild(createLineElement(item));
+                });
+            }
+
+            block.appendChild(linesContainer);
+
+            const addBtn = document.createElement('button');
+            addBtn.className = 'btn-add-line';
+            addBtn.innerText = '+ Add Entry';
+            addBtn.onclick = () => addLineItem(categoryName, linesContainer);
+            block.appendChild(addBtn);
+
+            container.appendChild(block);
+        }
+
+        function createLineElement(item) {
+            const line = document.createElement('div');
+            line.className = 'opex-line';
+            line.id = `line-${item.id}`;
+
+            // FIXED BUG: Switched onchange to oninput so descriptions capture immediately without needing to click outside.
+            line.innerHTML = `
+                <input type="text" placeholder="Short description..." value="${item.description || ''}" oninput="updateLineItem('${item.id}', 'description', this.value)">
+                <div class="expense-input-wrapper">
+                    <span>₹</span>
+                    <input type="number" value="${item.amount || 0}" oninput="updateLineItem('${item.id}', 'amount', this.value)">
+                </div>
+                <button class="btn-del-line" onclick="removeLineItem('${item.id}')">×</button>
+            `;
+            return line;
+        }
+
+        function addLineItem(categoryName, container) {
+            const newItem = {
+                id: 'temp_' + Date.now() + Math.floor(Math.random() * 1000),
+                month_name: state.selectedMonth,
+                year: state.selectedYear,
+                category: categoryName,
+                description: '',
+                amount: 0
+            };
+
+            state.currentMonthItems.push(newItem);
+            container.appendChild(createLineElement(newItem));
+        }
+
+        function updateLineItem(id, field, value) {
+            const item = state.currentMonthItems.find(i => i.id == id);
+            if (item) {
+                item[field] = field === 'amount' ? (Number(value) || 0) : value;
+                if (field === 'amount') calculateOpexTotal();
+            }
+        }
+
+        function removeLineItem(id) {
+            // Remove from local array
+            state.currentMonthItems = state.currentMonthItems.filter(i => i.id != id);
+
+            // Mark for DB deletion if it's not a temp item
+            if (!id.toString().startsWith('temp_')) {
+                state.deletedItemIds.push(id);
+            }
+
+            // Remove from DOM
+            const lineEl = document.getElementById(`line-${id}`);
+            if (lineEl) lineEl.remove();
+
+            calculateOpexTotal();
+        }
+
+        function addCustomCategory() {
+            const catName = prompt("Enter the name of the custom category:");
+            if (!catName || catName.trim() === "") return;
+
+            const cleanName = catName.trim();
+            const standardCatNames = OPEX_CATEGORIES.map(c => c.name);
+
+            if (standardCatNames.includes(cleanName) || state.customCategories.includes(cleanName)) {
+                return showToast("Category already exists!");
+            }
+
+            state.customCategories.push(cleanName);
+            renderOpexInputs(); // Re-render everything to show the new block
+        }
+
+        function calculateOpexTotal() {
+            let grandTotal = 0;
+            const categoryTotals = {};
+
+            state.currentMonthItems.forEach(item => {
+                const amt = Number(item.amount) || 0;
+                grandTotal += amt;
+
+                if (!categoryTotals[item.category]) categoryTotals[item.category] = 0;
+                categoryTotals[item.category] += amt;
+            });
+
+            document.getElementById('val-opex-total').innerText = formatINR(grandTotal);
+
+            // Update individual category headers
+            const allCats = [...OPEX_CATEGORIES.map(c => c.name), ...state.customCategories];
+            allCats.forEach(catName => {
+                const safeName = catName.replace(/\s+/g, '-');
+                const totalEl = document.getElementById(`cat-total-${safeName}`);
+                if (totalEl) {
+                    totalEl.innerText = formatINR(categoryTotals[catName] || 0);
+                }
+            });
+        }
+
+        async function saveOpexData() {
+            const btn = document.querySelector('.btn-action');
+            btn.innerText = "⏳ Saving...";
+
+            try {
+                // 1. Process Deletions
+                for (let id of state.deletedItemIds) {
+                    const { error } = await supabaseClient.from(TABLE_NAME).delete().eq('id', id);
+                    if (error) throw error;
+                    state.dbOpex = state.dbOpex.filter(e => e.id != id); // sync main cache
+                }
+                state.deletedItemIds = []; // clear queue
+
+                // 2. Process Updates and Inserts
+                for (let item of state.currentMonthItems) {
+                    // Ignore empty zero-amount rows to prevent DB clutter, unless they have a description
+                    if (item.amount === 0 && (!item.description || item.description.trim() === '')) {
+                        continue;
+                    }
+
+                    if (item.id.toString().startsWith('temp_')) {
+                        // Insert
+                        const { data: inserted, error } = await supabaseClient.from(TABLE_NAME).insert({
+                            month_name: item.month_name,
+                            year: item.year,
+                            category: item.category,
+                            category_name: item.category, // Added to satisfy the Not-Null constraint
+                            description: item.description,
+                            amount: item.amount,
+                            phase: 'opex' // Updated to correctly tag these as OPEX
+                        }).select();
+
+                        if (error) throw error;
+
+                        if (inserted && inserted.length > 0) {
+                            item.id = inserted[0].id; // Assign real ID
+                            state.dbOpex.push(inserted[0]); // sync cache
+                        }
+                    } else {
+                        // Update
+                        const { error } = await supabaseClient.from(TABLE_NAME).update({
+                            description: item.description,
+                            amount: item.amount
+                        }).eq('id', item.id);
+
+                        if (error) throw error;
+
+                        // sync cache
+                        const idx = state.dbOpex.findIndex(e => e.id == item.id);
+                        if (idx > -1) {
+                            state.dbOpex[idx].description = item.description;
+                            state.dbOpex[idx].amount = item.amount;
+                        }
+                    }
+                }
+
+                showToast("Monthly OPEX Saved! 💾");
+
+                // Re-render to stabilize temporary IDs into real IDs and fetch fresh
+                await fetchData();
+
+            } catch (error) {
+                console.error("Save Error:", error);
+                alert(`Supabase Error: ${error.message}\n\nIf it mentions "row-level security", go to Supabase -> Authentication -> Policies and disable RLS for 'finance_expenses'.`);
+            }
+
+            btn.innerText = "💾 Save Expenses";
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+    </script>
+</body>
+
+</html>
