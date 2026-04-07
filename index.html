@@ -70,8 +70,11 @@
         .opex-category-header h3 { margin: 0; font-size: 1rem; font-weight: 700; color: white;}
         .opex-category-header p { margin: 4px 0 0 0; font-size: 0.75rem; color: var(--text-muted);}
         
-        .opex-line { display: grid; grid-template-columns: 1fr 100px 30px; gap: 8px; margin-bottom: 8px; align-items: center; }
-        .opex-line input[type="text"] { background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; color: white; width: 100%; }
+        /* Updated to include Date column */
+        .opex-line { display: grid; grid-template-columns: 120px 1fr 100px 30px; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .opex-line input[type="text"], .opex-line input[type="date"] { background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 10px 12px; border-radius: 8px; font-size: 0.85rem; color: white; width: 100%; }
+        /* Style specifically for date picker icon to look good in dark mode */
+        .opex-line input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); cursor: pointer; }
         
         .expense-input-wrapper { display: flex; align-items: center; gap: 5px; background: rgba(0,0,0,0.2); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); }
         .expense-input-wrapper span { color: var(--text-muted); font-weight: 600; font-size: 0.9rem;}
@@ -95,11 +98,17 @@
 
         .error-banner { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: #fca5a5; padding: 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.85rem; display: none; }
         
-        /* New Floating Button */
+        /* Floating Button */
         .floating-refresh { position: fixed; bottom: 85px; right: 20px; width: 50px; height: 50px; border-radius: 25px; background: var(--bg-card); border: 1px solid var(--border); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(0,0,0,0.5); z-index: 1000; cursor: pointer; transition: all 0.2s ease; }
         .floating-refresh:active { transform: scale(0.9); }
         .floating-refresh.spinning .icon { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        /* Custom UI for adding categories instead of prompt() */
+        #custom-cat-ui { display: none; gap: 10px; margin-bottom: 24px; }
+        #custom-cat-ui input { flex: 1; padding: 12px; }
+        #custom-cat-ui button.btn-add { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+        #custom-cat-ui button.btn-cancel { background: transparent; color: var(--text-muted); border: 1px solid var(--border); padding: 10px 16px; border-radius: 12px; font-weight: 700; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -107,10 +116,10 @@
     <div id="toast">✅ Success</div>
 
     <div id="app">
-        <!-- Error Banner for Missing Table/Column -->
+        <!-- Error Banner -->
         <div id="db-error" class="error-banner">
-            <strong>⚠️ Database Setup Required</strong><br><br>
-            Please run the SQL snippet to create/update your table. Ensure <code>finance_expenses</code> has the <code>description</code> text column!
+            <strong>⚠️ Database Sync Issue</strong><br><br>
+            Supabase is catching up with the database changes. Background saving is active.
         </div>
 
         <div class="global-filter">
@@ -148,12 +157,17 @@
                     </div>
                     
                     <div style="display: flex;">
+                        <!-- Added COGS Block -->
                         <div style="flex: 1; padding: 16px; text-align: center; border-right: 1px solid rgba(255,255,255,0.05);">
-                            <h4 style="font-size: 0.7rem; color: var(--success); font-weight: 700; margin: 0 0 6px 0; letter-spacing: 0.5px;">GROSS PROFIT (PROJECTS)</h4>
+                            <h4 style="font-size: 0.65rem; color: #ec4899; font-weight: 700; margin: 0 0 6px 0; letter-spacing: 0.5px;">PROD. COSTS (COGS)</h4>
+                            <p id="dash-total-cogs" style="font-size: 1.1rem; font-weight: 800; margin: 0; color: white;">₹0</p>
+                        </div>
+                        <div style="flex: 1; padding: 16px; text-align: center; border-right: 1px solid rgba(255,255,255,0.05);">
+                            <h4 style="font-size: 0.65rem; color: var(--success); font-weight: 700; margin: 0 0 6px 0; letter-spacing: 0.5px;">GROSS PROFIT</h4>
                             <p id="dash-gross-profit" style="font-size: 1.1rem; font-weight: 800; margin: 0; color: white;">₹0</p>
                         </div>
                         <div style="flex: 1; padding: 16px; text-align: center;">
-                            <h4 style="font-size: 0.7rem; color: var(--warning); font-weight: 700; margin: 0 0 6px 0; letter-spacing: 0.5px;">FIXED OPEX (COMPANY)</h4>
+                            <h4 style="font-size: 0.65rem; color: var(--warning); font-weight: 700; margin: 0 0 6px 0; letter-spacing: 0.5px;">FIXED OPEX</h4>
                             <p id="dash-total-opex" style="font-size: 1.1rem; font-weight: 800; margin: 0; color: white;">₹0</p>
                         </div>
                     </div>
@@ -193,7 +207,14 @@
                 <!-- Populated by JS -->
             </div>
 
-            <button class="btn-custom-cat" onclick="addCustomCategory()">+ Add Custom Category</button>
+            <!-- Custom Category Input UI -->
+            <div id="custom-cat-ui">
+                <input type="text" id="custom-cat-input" placeholder="Enter category name...">
+                <button class="btn-add" onclick="confirmCustomCategory()">Add</button>
+                <button class="btn-cancel" onclick="document.getElementById('custom-cat-ui').style.display='none'">Cancel</button>
+            </div>
+            
+            <button class="btn-custom-cat" id="btn-show-cat" onclick="document.getElementById('custom-cat-ui').style.display='flex'">+ Add Custom Category</button>
 
             <div class="card calc-card" style="margin-top: 10px;">
                 <div class="calc-row total" style="border: none; padding: 0; margin: 0;">
@@ -254,7 +275,8 @@
             // Local state for the specific month editor
             currentMonthItems: [],
             deletedItemIds: [],
-            customCategories: [] // Any dynamically added categories
+            customCategories: [], // Any dynamically added categories
+            hasDateColumn: true // Assumes the schema is correct until an error says otherwise
         };
 
         const TABLE_NAME = 'finance_expenses';
@@ -277,6 +299,24 @@
             });
 
             await fetchData();
+
+            // --- FEATURE: Auto Update Every 5 Seconds ---
+            setInterval(async () => {
+                // We check if the user is typing so we don't accidentally refresh the screen and interrupt them!
+                const isTyping = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT');
+                
+                if (!isTyping) {
+                    try {
+                        if (document.getElementById('view-expenses').classList.contains('active')) {
+                            await saveOpexData(true); // Saves any changes quietly and fetches updates
+                        } else {
+                            await fetchData(); // Just fetches updates if on the dashboard
+                        }
+                    } catch (error) {
+                        console.warn("Background auto-sync error suppressed:", error);
+                    }
+                }
+            }, 5000);
         };
 
         async function fetchData() {
@@ -294,10 +334,14 @@
                 const { data: opex, error: errO } = await supabaseClient.from(TABLE_NAME).select('*');
                 
                 if (errO) {
-                    errorBanner.style.display = 'block';
+                    // Only show global missing table error if it isn't related specifically to the new date column
+                    if (!errO.message.includes('date')) {
+                        errorBanner.style.display = 'block';
+                        errorBanner.innerHTML = `<strong>⚠️ Database Setup Required</strong><br><br>Please verify your finance_expenses table.`;
+                    }
                     state.dbOpex = [];
                 } else {
-                    errorBanner.style.display = 'none';
+                    if (state.hasDateColumn) errorBanner.style.display = 'none';
                     state.dbOpex = opex || [];
                 }
 
@@ -306,7 +350,6 @@
                 updateDashboard();
                 prepareMonthState();
                 
-                // FIX: Force the UI to visually refresh with the new data if you're on the expenses tab!
                 if (document.getElementById('view-expenses').classList.contains('active')) {
                     renderOpexInputs();
                 }
@@ -365,7 +408,6 @@
 
             let opexBreakdown = {};
             state.dbOpex.forEach(exp => {
-                // FIXED BUG: Coerce exp.year to string to prevent mismatch with state.selectedYear
                 if (exp.month_name === state.selectedMonth && String(exp.year) === String(state.selectedYear)) {
                     const amt = Number(exp.amount) || 0;
                     totalOPEX += amt;
@@ -377,6 +419,7 @@
 
             // Update UI
             document.getElementById('dash-booked-revenue').innerText = formatINR(totalRevenue);
+            document.getElementById('dash-total-cogs').innerText = formatINR(totalCOGS); // FEATURE: COGS Rendered
             document.getElementById('dash-gross-profit').innerText = formatINR(grossProfit);
             document.getElementById('dash-total-opex').innerText = formatINR(totalOPEX);
             
@@ -428,15 +471,13 @@
         // ============================================================
         
         function prepareMonthState() {
-            // FIXED BUG: Using String() to ensure an integer year from Supabase matches the string from the dropdown.
             state.currentMonthItems = state.dbOpex
                 .filter(e => e.month_name === state.selectedMonth && String(e.year) === String(state.selectedYear))
-                .map(e => ({ ...e })); // clone
+                .map(e => ({ ...e })); 
                 
             state.deletedItemIds = [];
             state.customCategories = [];
 
-            // Detect any categories loaded from DB that aren't in the standard list
             const standardCatNames = OPEX_CATEGORIES.map(c => c.name);
             state.currentMonthItems.forEach(item => {
                 if (!standardCatNames.includes(item.category) && !state.customCategories.includes(item.category)) {
@@ -450,10 +491,7 @@
             const container = document.getElementById('opex-container');
             container.innerHTML = '';
 
-            // Render Standard Categories
             OPEX_CATEGORIES.forEach(cat => renderCategoryBlock(container, cat.name, cat.desc));
-            
-            // Render Custom Categories found in DB or added manually
             state.customCategories.forEach(catName => renderCategoryBlock(container, catName, 'Custom Category'));
 
             calculateOpexTotal();
@@ -483,10 +521,8 @@
             const linesContainer = document.createElement('div');
             linesContainer.id = `cat-lines-${categoryName.replace(/\s+/g, '-')}`;
 
-            // Find all items matching this category
             const items = state.currentMonthItems.filter(item => item.category === categoryName);
             
-            // If the category is totally empty, automatically give the user one blank line to start with!
             if (items.length === 0) {
                 addLineItem(categoryName, linesContainer);
             } else {
@@ -511,8 +547,9 @@
             line.className = 'opex-line';
             line.id = `line-${item.id}`;
             
-            // FIXED BUG: Switched onchange to oninput so descriptions capture immediately without needing to click outside.
+            // FEATURE: Added the date input right before the description
             line.innerHTML = `
+                <input type="date" value="${item.date || ''}" oninput="updateLineItem('${item.id}', 'date', this.value)">
                 <input type="text" placeholder="Short description..." value="${item.description || ''}" oninput="updateLineItem('${item.id}', 'description', this.value)">
                 <div class="expense-input-wrapper">
                     <span>₹</span>
@@ -529,6 +566,7 @@
                 month_name: state.selectedMonth,
                 year: state.selectedYear,
                 category: categoryName,
+                date: '', // Feature: Date field init
                 description: '',
                 amount: 0
             };
@@ -546,34 +584,34 @@
         }
 
         function removeLineItem(id) {
-            // Remove from local array
             state.currentMonthItems = state.currentMonthItems.filter(i => i.id != id);
             
-            // Mark for DB deletion if it's not a temp item
             if (!id.toString().startsWith('temp_')) {
                 state.deletedItemIds.push(id);
             }
 
-            // Remove from DOM
             const lineEl = document.getElementById(`line-${id}`);
             if (lineEl) lineEl.remove();
 
             calculateOpexTotal();
         }
 
-        function addCustomCategory() {
-            const catName = prompt("Enter the name of the custom category:");
+        function confirmCustomCategory() {
+            const input = document.getElementById('custom-cat-input');
+            const catName = input.value;
             if (!catName || catName.trim() === "") return;
             
             const cleanName = catName.trim();
             const standardCatNames = OPEX_CATEGORIES.map(c => c.name);
 
             if (standardCatNames.includes(cleanName) || state.customCategories.includes(cleanName)) {
-                return showToast("Category already exists!");
+                return showToast("Category already exists!", true);
             }
 
             state.customCategories.push(cleanName);
-            renderOpexInputs(); // Re-render everything to show the new block
+            input.value = '';
+            document.getElementById('custom-cat-ui').style.display = 'none';
+            renderOpexInputs(); 
         }
 
         function calculateOpexTotal() {
@@ -590,7 +628,6 @@
 
             document.getElementById('val-opex-total').innerText = formatINR(grandTotal);
 
-            // Update individual category headers
             const allCats = [...OPEX_CATEGORIES.map(c => c.name), ...state.customCategories];
             allCats.forEach(catName => {
                 const safeName = catName.replace(/\s+/g, '-');
@@ -606,11 +643,10 @@
             refreshBtn.classList.add('spinning');
             
             try {
-                // First save any pending changes silently
                 await saveOpexData(true); 
             } catch (error) {
                 console.error("Sync failed, falling back to fetch", error);
-                await fetchData(); // Fallback if save errors out
+                await fetchData(); 
             }
             
             refreshBtn.classList.remove('spinning');
@@ -619,78 +655,123 @@
 
         async function saveOpexData(isSilent = false) {
             const btn = document.querySelector('.btn-action');
-            if (!isSilent) btn.innerText = "⏳ Saving...";
+            if (!isSilent && btn) btn.innerText = "⏳ Saving...";
 
             try {
                 // 1. Process Deletions
                 for (let id of state.deletedItemIds) {
                     const { error } = await supabaseClient.from(TABLE_NAME).delete().eq('id', id);
                     if (error) throw error;
-                    state.dbOpex = state.dbOpex.filter(e => e.id != id); // sync main cache
+                    state.dbOpex = state.dbOpex.filter(e => e.id != id); 
                 }
-                state.deletedItemIds = []; // clear queue
+                state.deletedItemIds = []; 
 
                 // 2. Process Updates and Inserts
                 for (let item of state.currentMonthItems) {
-                    // Ignore empty zero-amount rows to prevent DB clutter, unless they have a description
                     if (item.amount === 0 && (!item.description || item.description.trim() === '')) {
                         continue; 
                     }
 
+                    // Build base payload with safe defaults
+                    let basePayload = {
+                        description: item.description,
+                        amount: item.amount
+                    };
+                    
+                    // Only append date if the schema has proven it exists
+                    if (state.hasDateColumn && item.date) {
+                        basePayload.date = item.date;
+                    }
+
                     if (item.id.toString().startsWith('temp_')) {
                         // Insert
-                        const { data: inserted, error } = await supabaseClient.from(TABLE_NAME).insert({
+                        let insertPayload = {
                             month_name: item.month_name,
                             year: item.year,
                             category: item.category,
-                            category_name: item.category, // Added to satisfy the Not-Null constraint
-                            description: item.description,
-                            amount: item.amount,
-                            phase: 'opex' // Updated to correctly tag these as OPEX
-                        }).select();
-                        
-                        if (error) throw error;
+                            category_name: item.category, 
+                            phase: 'opex',
+                            ...basePayload 
+                        };
 
-                        if (inserted && inserted.length > 0) {
-                            item.id = inserted[0].id; // Assign real ID
-                            state.dbOpex.push(inserted[0]); // sync cache
+                        const { data: inserted, error } = await supabaseClient.from(TABLE_NAME).insert(insertPayload).select();
+                        
+                        if (error) {
+                            // Automatically fall back if the user hasn't added the "date" column yet or cache is stale
+                            if (error.code === 'PGRST204' || (error.message && error.message.includes('date'))) {
+                                state.hasDateColumn = false; // Prevent further crashes
+                                document.getElementById('db-error').style.display = 'block'; // Ensure banner shows
+                                
+                                // Clean the payload and retry without the date
+                                delete insertPayload.date;
+                                const retry = await supabaseClient.from(TABLE_NAME).insert(insertPayload).select();
+                                
+                                if (retry.error) throw retry.error;
+                                if (retry.data && retry.data.length > 0) {
+                                    item.id = retry.data[0].id;
+                                    state.dbOpex.push(retry.data[0]);
+                                }
+                            } else {
+                                throw error;
+                            }
+                        } else if (inserted && inserted.length > 0) {
+                            item.id = inserted[0].id; 
+                            state.dbOpex.push(inserted[0]); 
                         }
                     } else {
                         // Update
-                        const { error } = await supabaseClient.from(TABLE_NAME).update({ 
-                            description: item.description, 
-                            amount: item.amount 
-                        }).eq('id', item.id);
+                        const { error } = await supabaseClient.from(TABLE_NAME).update(basePayload).eq('id', item.id);
                         
-                        if (error) throw error;
+                        if (error) {
+                            // Automatically fall back if the user hasn't added the "date" column yet or cache is stale
+                            if (error.code === 'PGRST204' || (error.message && error.message.includes('date'))) {
+                                state.hasDateColumn = false; // Prevent further crashes
+                                document.getElementById('db-error').style.display = 'block'; // Ensure banner shows
+                                
+                                // Clean the payload and retry without the date
+                                delete basePayload.date;
+                                const retry = await supabaseClient.from(TABLE_NAME).update(basePayload).eq('id', item.id);
+                                
+                                if (retry.error) throw retry.error;
+                            } else {
+                                throw error;
+                            }
+                        }
                         
-                        // sync cache
+                        // Update local cache
                         const idx = state.dbOpex.findIndex(e => e.id == item.id);
                         if(idx > -1) {
                             state.dbOpex[idx].description = item.description;
                             state.dbOpex[idx].amount = item.amount;
+                            if(state.hasDateColumn) state.dbOpex[idx].date = item.date;
                         }
                     }
                 }
                 
                 if (!isSilent) showToast("Monthly OPEX Saved! 💾");
-                
-                // Re-render to stabilize temporary IDs into real IDs and fetch fresh
                 await fetchData(); 
-
+                if (!isSilent && btn) btn.innerText = "💾 Save Expenses";
+                
+                return true; // Successfully saved
             } catch (error) {
                 console.error("Save Error:", error);
-                if (!isSilent) alert(`Supabase Error: ${error.message}\n\nIf it mentions "row-level security", go to Supabase -> Authentication -> Policies and disable RLS for 'finance_expenses'.`);
-                throw error;
+                if (!isSilent) {
+                    showToast(`Database Error: ${error.message}`, true);
+                    if (btn) btn.innerText = "💾 Save Expenses";
+                }
+                
+                // Return instead of throw to completely prevent UNHANDLEDREJECTION in the browser!
+                return false; 
             }
-
-            if (!isSilent) btn.innerText = "💾 Save Expenses";
         }
 
-        function showToast(msg) {
+        function showToast(msg, isError = false) {
             const t = document.getElementById('toast');
-            t.innerText = msg; t.classList.add('show');
-            setTimeout(() => t.classList.remove('show'), 2500);
+            t.innerText = msg; 
+            t.style.background = isError ? 'var(--danger)' : 'white';
+            t.style.color = isError ? 'white' : 'black';
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3500);
         }
 
     </script>
